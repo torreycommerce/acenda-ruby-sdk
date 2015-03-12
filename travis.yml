@@ -4,4 +4,5 @@ rvm:
 gemfile:
     - Gemfile
 script:
+  - cd tests; bundle install; cd -
   - bundle exec rake spec
