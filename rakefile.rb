@@ -1,3 +1,5 @@
+
+
 begin
     require 'rspec/core/rake_task'
     RSpec::Core::RakeTask.new(:spec) do |t|
@@ -5,5 +7,7 @@ begin
         t.rspec_opts = "-c --format documentation"
         t.verbose = true
     end
+
+    task :default => :spec
 rescue LoadError
 end
