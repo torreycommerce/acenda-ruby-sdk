@@ -1,17 +1,8 @@
-load '../lib/acenda-client.rb'
+load 'lib/acenda-client.rb'
 
 describe 'Acenda::Response' do
     before (:all) do
-        @config = ""
-        File.open("config.json", "r") do |f|
-            f.each_line do |line|
-                @config += line
-            end
-        end
-
-        @config = JSON.parse(@config)
-        @acenda = Acenda::API.new @config["client_id"], @config["client_secret"], @config["store_url"]
-
+        @acenda = Acenda::API.new ENV["client_id"], ENV["client_secret"], ENV["store_url"]
         @response = @acenda.query('GET', '/product')
     end
 

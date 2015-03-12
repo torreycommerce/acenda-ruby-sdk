@@ -1,17 +1,6 @@
-load '../lib/acenda-client.rb'
+load 'lib/acenda-client.rb'
 
 describe 'Acenda::API.new' do
-    before (:all) do
-        @config = ""
-        File.open("config.json", "r") do |f|
-            f.each_line do |line|
-                @config += line
-            end
-        end
-
-        @config = JSON.parse(@config)
-    end
-
     context 'should not be instanciated' do
         it 'without parameters' do
             expect{ Acenda::API.new() }.to raise_error(ArgumentError)
@@ -28,12 +17,12 @@ describe 'Acenda::API.new' do
 
     context 'should be instantiated ' do
         it 'with wrong credentials and good URL but should not generate token' do
-            @acenda = Acenda::API.new("test", "test", @config["store_url"])
+            @acenda = Acenda::API.new("test", "test", ENV["store_url"])
             expect{ @acenda.query('GET', '/product').get_code() }.to raise_error(Acenda::APIErrorHTTP)
         end
 
         it 'should be able to query with all good parameters' do
-            expect(Acenda::API.new(@config["client_id"], @config["client_secret"], @config["store_url"]).query('GET', '/product').get_code()).to eq(200)
+            expect(Acenda::API.new(ENV["client_id"], ENV["client_secret"], ENV["store_url"]).query('GET', '/product').get_code()).to eq(200)
         end
     end
 end
