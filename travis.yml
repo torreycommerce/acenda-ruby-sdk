@@ -1,5 +1,4 @@
 language: ruby
 rvm:
     - 2.0.0p643
-gemfile:
-    - Gemfile
+script: bundle exec rake spec
