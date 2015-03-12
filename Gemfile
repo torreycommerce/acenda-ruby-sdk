@@ -1,3 +1,5 @@
-require 'rubygems'
+ruby '2.0.0'
 
-gem 'rspec'
+source 'https://rubygems.org'
+
+gem 'rspec', '~> 3.2.0'
