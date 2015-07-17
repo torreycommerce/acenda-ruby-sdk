@@ -8,6 +8,8 @@ Homepage: [Git repository](http://github.com/torreycommerce/acenda-ruby-sdk)
 
 Author: Acenda development Team
 
+[![Gem Version](https://badge.fury.io/rb/acenda-client.svg)](http://badge.fury.io/rb/acenda-client)
+
 ----------
 
 ## Description
