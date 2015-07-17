@@ -100,9 +100,9 @@ module Acenda
                 when "acendavm"
                     @config[:acenda_api_url] = "http://acenda.acendev"
                 when "development"
-                    @config[:acenda_api_url] = "http://acendan.devserver"
+                    @config[:acenda_api_url] = "https://acenda.acenda.devserver"
                 else
-                    @config[:acenda_api_url] = "http://acenda.com"
+                    @config[:acenda_api_url] = "https://acenda.com"
                 end
             else
                 raise Acenda::APIErrorClient, "Wrong parameters type provided to Acenda::API"
