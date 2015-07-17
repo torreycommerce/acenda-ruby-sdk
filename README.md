@@ -1,6 +1,6 @@
 # Acenda API client
 
-![enter image description here](http://acenda.com/images/logo.png)
+![enter image description here](https://acenda.com/images/logo-acenda@2x.png)
 
 Acenda website: [http://acenda.com](http://acenda.com)
 Homepage: [Git repository](http://github.com/torreycommerce/acenda-ruby-sdk)
@@ -55,4 +55,4 @@ puts response.get_number() # 0
 Please report bugs on the issue manager of the project on GitHub.
 A forum will soon be open to answer questions.
 
-![enter image description here](http://acenda.com/images/logo.png)
+![enter image description here](https://acenda.com/images/logo-acenda@2x.png)
