@@ -3,9 +3,10 @@
 ![enter image description here](https://acenda.com/images/logo-acenda@2x.png)
 
 Acenda website: [http://acenda.com](http://acenda.com)
+
 Homepage: [Git repository](http://github.com/torreycommerce/acenda-ruby-sdk)
 
-Author: TorreyCommerce
+Author: Acenda development Team
 
 ----------
 
