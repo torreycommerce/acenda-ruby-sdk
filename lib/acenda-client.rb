@@ -84,26 +84,21 @@ module Acenda
 
     class API
         require 'uri'
-        require 'net/http'
+        require 'openssl'
+        require 'net/https'
 
-        def initialize(client_id, client_secret, store_url)
+        def initialize(client_id, client_secret, store_url, verify_ssl = true)
+            
             if (client_id.is_a? String and client_secret.is_a? String and store_url.is_a? String)
                 raise Acenda::APIErrorClient, "store_url MUST be a valid URL" unless store_url =~ URI::regexp
                 @config = {
                     :client_id => client_id,
                     :client_secret => client_secret,
                     :store_url => store_url + (store_url.split('').last == '/' ? 'api' : '/api'),
-                    :access_token => nil
+                    :access_token => nil,
+                    :acenda_api_url => store_url,
+                    :verify_ssl => verify_ssl
                 }
-
-                case ENV["ACENDA_MODE"]
-                when "acendavm"
-                    @config[:acenda_api_url] = "http://acenda.acendev"
-                when "development"
-                    @config[:acenda_api_url] = "https://acenda.acenda.devserver"
-                else
-                    @config[:acenda_api_url] = "https://acenda.com"
-                end
             else
                 raise Acenda::APIErrorClient, "Wrong parameters type provided to Acenda::API"
             end
@@ -113,19 +108,46 @@ module Acenda
             if (verb.is_a? String and uri.is_a? String and params.is_a? Hash)
                 generate_token() if (!@config[:access_token])
 
+                json_headers = {"Content-Type" => "application/json",
+                "Accept" => "application/json"}
+
                 case verb.downcase
                 when "get"
                     query = generate_query(uri, params)
-                    return Acenda::Response.new(Net::HTTP.get(query), query, params)
+
+                    http = Net::HTTP.new(query.host, query.port)
+                    
+                    http.use_ssl = true if query.scheme == "https"
+                    http.verify_mode = OpenSSL::SSL::VERIFY_NONE if query.scheme == "https" and !@config[:verify_ssl] 
+
+                    return Acenda::Response.new(http.get(query), query, params)
                 when "post"
                     query = generate_query(uri)
-                    return Acenda::Response.new(Net::HTTP.post_form(query, params), query, params)
+
+                    http = Net::HTTP.new(query.host, query.port)
+                    
+                    http.use_ssl = true if query.scheme == "https"
+                    http.verify_mode = OpenSSL::SSL::VERIFY_NONE if query.scheme == "https" and !@config[:verify_ssl] 
+
+                    return Acenda::Response.new http.post(query, params.to_json, json_headers), query, params
                 when "put"
                     query = generate_query(uri)
-                    return Acenda::Response.new(Net::HTTP.put(generate_query(uri), params), query, params)
+
+                    http = Net::HTTP.new(query.host, query.port)
+                    
+                    http.use_ssl = true if query.scheme == "https"
+                    http.verify_mode = OpenSSL::SSL::VERIFY_NONE if query.scheme == "https" and !@config[:verify_ssl] 
+
+                    return Acenda::Response.new(http.put(query, params.to_json, json_headers), query, params)
                 when "delete"
                     query = generate_query(uri, params)
-                    return Acenda::Response.new(Net::HTTP.delete(query), query, params)
+
+                    http = Net::HTTP.new(query.host, query.port)
+                    
+                    http.use_ssl = true if query.scheme == "https"
+                    http.verify_mode = OpenSSL::SSL::VERIFY_NONE if query.scheme == "https" and !@config[:verify_ssl] 
+
+                    return Acenda::Response.new(http.delete(query), query, params)
                 else
                     raise Acenda::APIErrorClient, "Verb not recognized yet"
                 end
@@ -142,24 +164,35 @@ module Acenda
             parameters = ""
             params.each_with_index do |(k,v), i|
                 parameters += "&" unless i < 1
-                parameters += k.to_s+"="+v.to_s
+                parameters += k.to_s+"="+URI.encode(v.to_s)
             end if params != ""
 
             @route = @config[:store_url]
             @route += (uri.split('').first == '/') ? uri : '/'+uri
             @route += (uri.count('?') > 0 ? '&' : '?')+parameters
+            
             @route = URI(@route)
 
             return @route
         end
 
         def generate_token()
-            response = Acenda::Response.new Net::HTTP.post_form(URI(@config[:acenda_api_url]+"/oauth/token"), {
+            json_headers = {"Content-Type" => "application/json",
+                "Accept" => "application/json"}
+
+            uri = URI.parse(@config[:acenda_api_url]+"/oauth/token")
+            http = Net::HTTP.new(uri.host, uri.port)
+            
+            http.use_ssl = true if uri.scheme == "https"
+            http.verify_mode = OpenSSL::SSL::VERIFY_NONE if uri.scheme == "https" and !@config[:verify_ssl] 
+
+            params = {
                 "client_id" => @config[:client_id],
                 "client_secret" => @config[:client_secret],
                 "grant_type" => "client_credentials"
-            })
+            }
 
+            response = Acenda::Response.new http.post(uri.path, params.to_json, json_headers)            
             @config[:access_token] = response.get_result()[:access_token] unless response.get_code() != 200
             raise Acenda::APIErrorHTTP, "Token generation failed #{response.get_code()}" if response.get_code() != 200
         end
