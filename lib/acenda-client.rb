@@ -12,10 +12,15 @@ module Acenda
     class Response
         require 'json'
 
-        def initialize(response, url="", params=[])
+        def initialize(response, url="", params=[], debug = false)
             @url = url
             @params = params
             @response = treat_response(response)
+
+            puts "\r\n---"
+            puts "Acenda:: response body: #{response.body}"  if debug == true
+            puts "Acenda:: response code: #{response.code}"  if debug == true
+            puts "---\r\n"
         end
 
         def get_url()
@@ -87,8 +92,7 @@ module Acenda
         require 'openssl'
         require 'net/https'
 
-        def initialize(client_id, client_secret, store_url, verify_ssl = true)
-            
+        def initialize(client_id, client_secret, store_url, verify_ssl = true, debug = false)
             if (client_id.is_a? String and client_secret.is_a? String and store_url.is_a? String)
                 raise Acenda::APIErrorClient, "store_url MUST be a valid URL" unless store_url =~ URI::regexp
                 @config = {
@@ -97,8 +101,11 @@ module Acenda
                     :store_url => store_url + (store_url.split('').last == '/' ? 'api' : '/api'),
                     :access_token => nil,
                     :acenda_api_url => store_url,
-                    :verify_ssl => verify_ssl
+                    :verify_ssl => verify_ssl,
+                    :debug => debug
                 }
+
+                puts "\r\n---\r\nAcenda:: Configuration: #{@config.to_json}\r\n---"  if @config[:debug] == true
             else
                 raise Acenda::APIErrorClient, "Wrong parameters type provided to Acenda::API"
             end
@@ -110,46 +117,59 @@ module Acenda
 
                 json_headers = {"Content-Type" => "application/json",
                 "Accept" => "application/json"}
+                begin
+                    case verb.downcase
+                    when "get"
+                        query = generate_query(uri, params)
 
-                case verb.downcase
-                when "get"
-                    query = generate_query(uri, params)
+                        http = Net::HTTP.new(query.host, query.port)
+                        
+                        http.use_ssl = true if query.scheme == "https"
+                        http.verify_mode = OpenSSL::SSL::VERIFY_NONE if query.scheme == "https" and !@config[:verify_ssl] 
+                        puts "---\r\nAcenda:: URI: #{uri}" if @config[:debug] == true
+                        puts "Acenda:: PARAMS: #{params}\r\n---"  if @config[:debug] == true
+                        return Acenda::Response.new(http.get(query), query, params, @config[:debug])
+                    when "post"
+                        query = generate_query(uri)
 
-                    http = Net::HTTP.new(query.host, query.port)
-                    
-                    http.use_ssl = true if query.scheme == "https"
-                    http.verify_mode = OpenSSL::SSL::VERIFY_NONE if query.scheme == "https" and !@config[:verify_ssl] 
+                        http = Net::HTTP.new(query.host, query.port)
+                        
+                        http.use_ssl = true if query.scheme == "https"
+                        http.verify_mode = OpenSSL::SSL::VERIFY_NONE if query.scheme == "https" and !@config[:verify_ssl] 
 
-                    return Acenda::Response.new(http.get(query), query, params)
-                when "post"
-                    query = generate_query(uri)
+                        puts "---\r\nAcenda:: URI: #{uri}" if @config[:debug] == true
+                        puts "Acenda:: PARAMS: #{params}\r\n---"  if @config[:debug] == true
+                        
+                        return Acenda::Response.new http.post(query, params.to_json, json_headers), query, params, @config[:debug]
+                    when "put"
+                        query = generate_query(uri)
 
-                    http = Net::HTTP.new(query.host, query.port)
-                    
-                    http.use_ssl = true if query.scheme == "https"
-                    http.verify_mode = OpenSSL::SSL::VERIFY_NONE if query.scheme == "https" and !@config[:verify_ssl] 
+                        http = Net::HTTP.new(query.host, query.port)
+                        
+                        http.use_ssl = true if query.scheme == "https"
+                        http.verify_mode = OpenSSL::SSL::VERIFY_NONE if query.scheme == "https" and !@config[:verify_ssl] 
 
-                    return Acenda::Response.new http.post(query, params.to_json, json_headers), query, params
-                when "put"
-                    query = generate_query(uri)
+                        puts "---\r\nAcenda:: URI: #{uri}" if @config[:debug] == true
+                        puts "Acenda:: PARAMS: #{params}\r\n---"  if @config[:debug] == true
 
-                    http = Net::HTTP.new(query.host, query.port)
-                    
-                    http.use_ssl = true if query.scheme == "https"
-                    http.verify_mode = OpenSSL::SSL::VERIFY_NONE if query.scheme == "https" and !@config[:verify_ssl] 
+                        return Acenda::Response.new(http.put(query, params.to_json, json_headers), query, params, @config[:debug])
+                    when "delete"
+                        query = generate_query(uri, params)
 
-                    return Acenda::Response.new(http.put(query, params.to_json, json_headers), query, params)
-                when "delete"
-                    query = generate_query(uri, params)
+                        http = Net::HTTP.new(query.host, query.port)
+                        
+                        http.use_ssl = true if query.scheme == "https"
+                        http.verify_mode = OpenSSL::SSL::VERIFY_NONE if query.scheme == "https" and !@config[:verify_ssl] 
 
-                    http = Net::HTTP.new(query.host, query.port)
-                    
-                    http.use_ssl = true if query.scheme == "https"
-                    http.verify_mode = OpenSSL::SSL::VERIFY_NONE if query.scheme == "https" and !@config[:verify_ssl] 
+                        puts "---\r\nAcenda:: URI: #{uri}" if @config[:debug] == true
+                        puts "Acenda:: PARAMS: #{params}\r\n---"  if @config[:debug] == true
 
-                    return Acenda::Response.new(http.delete(query), query, params)
-                else
-                    raise Acenda::APIErrorClient, "Verb not recognized yet"
+                        return Acenda::Response.new(http.delete(query), query, params, @config[:debug])
+                    else
+                        raise Acenda::APIErrorClient, "Verb not recognized yet"
+                    end
+                rescue => e
+                    e.backtrace.push("\r\nError custom trace:\r\nQuery: #{query}\r\n\r\nParams: #{params}\r\n")
                 end
             else
                 raise Acenda::APIErrorClient, "Wrong parameters type provided to Acenda::API.query"
@@ -192,7 +212,13 @@ module Acenda
                 "grant_type" => "client_credentials"
             }
 
-            response = Acenda::Response.new http.post(uri.path, params.to_json, json_headers)            
+            puts "---\r\nAcenda:: URI: #{uri}" if @config[:debug] == true
+            puts "Acenda:: PARAMS: #{params}\r\n---"  if @config[:debug] == true
+            begin
+                response = Acenda::Response.new http.post(uri, params.to_json, json_headers), uri, params, @config[:debug]
+            rescue => e
+                e.backtrace.push("\r\nError custom trace:\r\nQuery: #{query}\r\n\r\nParams: #{params}\r\n")
+            end
             @config[:access_token] = response.get_result()[:access_token] unless response.get_code() != 200
             raise Acenda::APIErrorHTTP, "Token generation failed #{response.get_code()}" if response.get_code() != 200
         end
